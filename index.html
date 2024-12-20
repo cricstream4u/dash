@@ -32,60 +32,69 @@
 
             if (!videoUrl) {
                 document.body.innerHTML = "<h2>Video URL missing in query parameter</h2>";
+                return;
+            }
+
+            const video = document.getElementById('video');
+            const defaultOptions = {
+                controls: [
+                    'play-large',
+                    'play',
+                    'progress',
+                    'duration',
+                    'mute',
+                    'settings',
+                    'pip',
+                    'airplay',
+                    'fullscreen',
+                ],
+                settings: ['quality'],
+                quality: {
+                    default: 0,
+                    options: [], // Filled dynamically
+                    forced: true,
+                    onChange: (quality) => console.log(`Quality changed to: ${quality}`),
+                },
+            };
+
+            if (videoUrl.endsWith('.mpd')) {
+                // DASH Support
+                const dashPlayer = dashjs.MediaPlayer().create();
+                dashPlayer.initialize(video, videoUrl, true);
+
+                dashPlayer.on(dashjs.MediaPlayer.events.STREAM_INITIALIZED, () => {
+                    const bitrates = dashPlayer.getBitrateInfoListFor("video").map(b => b.height);
+                    defaultOptions.quality.options = [0, ...bitrates]; // 0 for Auto
+                    defaultOptions.quality.onChange = (newQuality) => {
+                        if (newQuality === 0) {
+                            dashPlayer.setAutoSwitchQualityFor("video", true);
+                        } else {
+                            dashPlayer.setAutoSwitchQualityFor("video", false);
+                            const index = dashPlayer.getBitrateInfoListFor("video").findIndex(b => b.height === newQuality);
+                            dashPlayer.setQualityFor("video", index);
+                        }
+                    };
+
+                    const player = new Plyr(video, defaultOptions);
+                });
+            } else if (Hls.isSupported() && videoUrl.endsWith('.m3u8')) {
+                // HLS Support
+                const hls = new Hls();
+                hls.loadSource(videoUrl);
+                hls.attachMedia(video);
+
+                hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                    const availableQualities = hls.levels.map(level => level.height);
+                    defaultOptions.quality.options = [0, ...availableQualities]; // 0 for Auto
+                    defaultOptions.quality.onChange = (newQuality) => updateQuality(hls, newQuality);
+
+                    const player = new Plyr(video, defaultOptions);
+                });
+            } else if (video.canPlayType('application/vnd.apple.mpegurl') || video.canPlayType('application/dash+xml')) {
+                video.src = videoUrl;
+                const player = new Plyr(video, defaultOptions);
             } else {
-                const video = document.getElementById('video');
-                const defaultOptions = {
-                    controls: [
-                        'play-large',
-                        'play',
-                        'progress',
-                        'duration',
-                        'mute',
-                        'settings',
-                        'pip',
-                        'airplay',
-                        'fullscreen',
-                    ],
-                    settings: ['quality'],
-                };
-
-                if (videoUrl.endsWith('.mpd')) {
-                    // DASH Support
-                    const dashPlayer = dashjs.MediaPlayer().create();
-                    dashPlayer.initialize(video, videoUrl, true);
-                    const player = new Plyr(video, defaultOptions);
-
-                    // Add fullscreen landscape orientation
-                    addFullscreenOrientationHandler(player);
-                } else if (Hls.isSupported() && videoUrl.endsWith('.m3u8')) {
-                    // HLS Support
-                    const hls = new Hls();
-                    hls.loadSource(videoUrl);
-                    hls.attachMedia(video);
-                    hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                        const availableQualities = hls.levels.map(level => level.height);
-
-                        defaultOptions.quality = {
-                            default: 0,
-                            options: availableQualities,
-                            forced: true,
-                            onChange: (newQuality) => updateQuality(hls, newQuality),
-                        };
-
-                        const player = new Plyr(video, defaultOptions);
-
-                        // Add fullscreen landscape orientation
-                        addFullscreenOrientationHandler(player);
-                    });
-                } else if (video.canPlayType('application/vnd.apple.mpegurl') || video.canPlayType('application/dash+xml')) {
-                    video.src = videoUrl;
-                    const player = new Plyr(video, defaultOptions);
-
-                    // Add fullscreen landscape orientation
-                    addFullscreenOrientationHandler(player);
-                } else {
-                    document.body.innerHTML = "<h2>Neither HLS nor DASH is supported on your browser</h2>";
-                }
+                document.body.innerHTML = "<h2>Neither HLS nor DASH is supported on your browser</h2>";
             }
         });
 
@@ -93,48 +102,12 @@
             if (newQuality === 0) {
                 hls.currentLevel = -1; // Auto
             } else {
-                hls.levels.forEach((level, index) => {
-                    if (level.height === newQuality) {
-                        hls.currentLevel = index;
-                    }
-                });
+                const index = hls.levels.findIndex(level => level.height === newQuality);
+                if (index !== -1) {
+                    hls.currentLevel = index;
+                }
             }
         }
-
-        function addFullscreenOrientationHandler(player) {
-            player.on('enterfullscreen', () => {
-                if (screen.orientation && screen.orientation.lock) {
-                    screen.orientation.lock('landscape').catch(err => {
-                        console.warn('Screen orientation lock failed:', err);
-                    });
-                }
-            });
-
-            player.on('exitfullscreen', () => {
-                if (screen.orientation && screen.orientation.unlock) {
-                    screen.orientation.unlock();
-                }
-            });
-        }
-
-        if (confirm("Join Our Telegram Channel @cric_stream For More Links")) {
-            window.location.href = "https://t.me/cric_stream";
-        }
     </script>
-
-    <!-- BEGIN: Powered by Supercounters.com -->
-    <center>
-        <script type="text/javascript" src="//widget.supercounters.com/ssl/online_t.js"></script>
-        <script type="text/javascript">sc_online_t(1703448,"Watching....","#1d1d21");</script>
-        <br>
-        <noscript><a href="https://www.supercounters.com/"></a></noscript>
-    </center>
-    <!-- END: Powered by Supercounters.com -->
-
-    <div style="background-color: #0074d9; text-align: center; padding: 10px;">
-        <a href="https://telegram.me/cric_stream" target="_blank">
-            <button id="joinTelegramButton" style="background-color: #fff; color: #0074d9; border: 2px solid #0074d9; padding: 5px 10px;">Join Telegram</button>
-        </a>
-    </div>
 </body>
 </html>
