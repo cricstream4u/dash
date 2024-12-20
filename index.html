@@ -38,7 +38,7 @@
             const video = document.getElementById('video');
             const defaultOptions = {
                 controls: [
-                    'play-large',
+                    'play-large', // Center play button
                     'play',
                     'progress',
                     'duration',
@@ -57,8 +57,9 @@
                 },
             };
 
+            let player;
+
             if (videoUrl.endsWith('.mpd')) {
-                // DASH Support
                 const dashPlayer = dashjs.MediaPlayer().create();
                 dashPlayer.initialize(video, videoUrl, true);
 
@@ -75,10 +76,10 @@
                         }
                     };
 
-                    const player = new Plyr(video, defaultOptions);
+                    player = new Plyr(video, defaultOptions);
+                    attachPlayPauseHandler(player);
                 });
             } else if (Hls.isSupported() && videoUrl.endsWith('.m3u8')) {
-                // HLS Support
                 const hls = new Hls();
                 hls.loadSource(videoUrl);
                 hls.attachMedia(video);
@@ -88,11 +89,13 @@
                     defaultOptions.quality.options = [0, ...availableQualities]; // 0 for Auto
                     defaultOptions.quality.onChange = (newQuality) => updateQuality(hls, newQuality);
 
-                    const player = new Plyr(video, defaultOptions);
+                    player = new Plyr(video, defaultOptions);
+                    attachPlayPauseHandler(player);
                 });
             } else if (video.canPlayType('application/vnd.apple.mpegurl') || video.canPlayType('application/dash+xml')) {
                 video.src = videoUrl;
-                const player = new Plyr(video, defaultOptions);
+                player = new Plyr(video, defaultOptions);
+                attachPlayPauseHandler(player);
             } else {
                 document.body.innerHTML = "<h2>Neither HLS nor DASH is supported on your browser</h2>";
             }
@@ -107,6 +110,24 @@
                     hls.currentLevel = index;
                 }
             }
+        }
+
+        function attachPlayPauseHandler(player) {
+            // Hide the center play button on play
+            player.on('play', () => {
+                const playLargeButton = document.querySelector('.plyr__control--overlaid');
+                if (playLargeButton) {
+                    playLargeButton.style.display = 'none';
+                }
+            });
+
+            // Show the center play button on pause
+            player.on('pause', () => {
+                const playLargeButton = document.querySelector('.plyr__control--overlaid');
+                if (playLargeButton) {
+                    playLargeButton.style.display = '';
+                }
+            });
         }
     </script>
 </body>
