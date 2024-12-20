@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>DASH & HLS Player with Plyr</title>
+    <title>DASH Player with Plyr</title>
     <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
     <script src="https://cdn.jsdelivr.net/npm/dashjs/dist/dash.all.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <script src="https://cdn.plyr.io/3.7.8/plyr.js"></script>
     <style>
         .video-container {
@@ -27,7 +26,7 @@
 <body>
     <center>
         <div class="video-container">
-            <video preload="none" id="video" autoplay controls crossorigin></video>
+            <video id="video" controls crossorigin></video>
         </div>
     </center>
     <script>
@@ -35,38 +34,33 @@
             const urlParams = new URLSearchParams(window.location.search);
             const videoUrl = urlParams.get('video');
 
-            if (!videoUrl) {
-                document.body.innerHTML = "<h2>Video URL missing in query parameter</h2>";
+            if (!videoUrl || !videoUrl.endsWith('.mpd')) {
+                document.body.innerHTML = "<h2>Valid DASH (.mpd) URL is required in the query parameter.</h2>";
                 return;
             }
 
             const video = document.getElementById('video');
-            const defaultOptions = {
-                controls: [
-                    'play-large',
-                    'play',
-                    'progress',
-                    'duration',
-                    'mute',
-                    'settings',
-                    'pip',
-                    'airplay',
-                    'fullscreen',
-                ],
-                settings: ['quality'],
-            };
 
-            let player;
+            const dashPlayer = dashjs.MediaPlayer().create();
+            dashPlayer.initialize(video, videoUrl, true);
 
-            if (videoUrl.endsWith('.mpd')) {
-                const dashPlayer = dashjs.MediaPlayer().create();
-                dashPlayer.initialize(video, videoUrl, true);
+            dashPlayer.on(dashjs.MediaPlayer.events.STREAM_INITIALIZED, () => {
+                const bitrates = dashPlayer.getBitrateInfoListFor("video").map(b => b.height);
 
-                dashPlayer.on(dashjs.MediaPlayer.events.STREAM_INITIALIZED, () => {
-                    const bitrates = dashPlayer.getBitrateInfoListFor("video").map(b => b.height);
-
-                    // Add quality options to Plyr
-                    defaultOptions.quality = {
+                const player = new Plyr(video, {
+                    controls: [
+                        'play-large',
+                        'play',
+                        'progress',
+                        'duration',
+                        'mute',
+                        'settings',
+                        'pip',
+                        'airplay',
+                        'fullscreen',
+                    ],
+                    settings: ['quality'],
+                    quality: {
                         default: 0,
                         options: [0, ...bitrates],
                         forced: true,
@@ -79,56 +73,14 @@
                                 dashPlayer.setQualityFor("video", index);
                             }
                         },
-                    };
-
-                    player = new Plyr(video, defaultOptions);
-
-                    // Attach fullscreen orientation handler
-                    attachFullscreenOrientationHandler(player);
-
-                    // Ensure controls appear on hover and click
-                    ensureControlsVisibility(player);
+                    },
                 });
-            } else if (Hls.isSupported() && videoUrl.endsWith('.m3u8')) {
-                const hls = new Hls();
-                hls.loadSource(videoUrl);
-                hls.attachMedia(video);
 
-                hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                    const availableQualities = hls.levels.map(level => level.height);
-
-                    defaultOptions.quality = {
-                        default: 0,
-                        options: [0, ...availableQualities],
-                        forced: true,
-                        onChange: (newQuality) => updateQuality(hls, newQuality),
-                    };
-
-                    player = new Plyr(video, defaultOptions);
-
-                    attachFullscreenOrientationHandler(player);
-                    ensureControlsVisibility(player);
-                });
-            } else if (video.canPlayType('application/vnd.apple.mpegurl') || video.canPlayType('application/dash+xml')) {
-                video.src = videoUrl;
-                player = new Plyr(video, defaultOptions);
+                // Attach fullscreen and play/pause handlers
                 attachFullscreenOrientationHandler(player);
-                ensureControlsVisibility(player);
-            } else {
-                document.body.innerHTML = "<h2>Neither HLS nor DASH is supported on your browser</h2>";
-            }
+                attachPlayPauseHandler(player);
+            });
         });
-
-        function updateQuality(hls, newQuality) {
-            if (newQuality === 0) {
-                hls.currentLevel = -1;
-            } else {
-                const index = hls.levels.findIndex(level => level.height === newQuality);
-                if (index !== -1) {
-                    hls.currentLevel = index;
-                }
-            }
-        }
 
         function attachFullscreenOrientationHandler(player) {
             player.on('enterfullscreen', () => {
@@ -146,14 +98,19 @@
             });
         }
 
-        function ensureControlsVisibility(player) {
-            // Force controls to show on click or hover
+        function attachPlayPauseHandler(player) {
             player.on('play', () => {
-                player.elements.container.classList.remove('plyr--hide-controls');
+                const playLargeButton = document.querySelector('.plyr__control--overlaid');
+                if (playLargeButton) {
+                    playLargeButton.style.display = 'none';
+                }
             });
 
             player.on('pause', () => {
-                player.elements.container.classList.remove('plyr--hide-controls');
+                const playLargeButton = document.querySelector('.plyr__control--overlaid');
+                if (playLargeButton) {
+                    playLargeButton.style.display = '';
+                }
             });
 
             player.elements.container.addEventListener('mousemove', () => {
