@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TG- @cric_stream</title>
+    <title>HLS Player with Quality Switch</title>
     <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css">
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <script src="https://cdn.plyr.io/3.7.8/plyr.js"></script>
     <style>
         .video-container {
-            width: 100%;
+            width: 90%;
             max-width: 800px;
             margin: 0 auto;
             text-align: center;
@@ -28,12 +28,19 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const videoUrl = urlParams.get('video');
+
+            if (!videoUrl) {
+                document.body.innerHTML = "<h2>Video URL missing in query parameter</h2>";
+                return;
+            }
+
             const videoElement = document.getElementById('video-player');
-            const hlsUrl = "https://mafiatv.live/watch.php?id=e11f5fd4a4f8d93211d512209b24111c15593bd2484daf7fd8c890afebdddea45c16e7420649d322b6ca99cc54024d4a&e=.m3u8";
 
             if (Hls.isSupported()) {
                 const hls = new Hls();
-                hls.loadSource(hlsUrl);
+                hls.loadSource(videoUrl);
                 hls.attachMedia(videoElement);
 
                 // Initialize Plyr with default settings
@@ -83,7 +90,7 @@
                 });
             } else if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
                 // For Safari and other native HLS-supporting browsers
-                videoElement.src = hlsUrl;
+                videoElement.src = videoUrl;
                 const player = new Plyr(videoElement, {
                     controls: [
                         'play-large',
