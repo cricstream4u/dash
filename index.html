@@ -9,24 +9,34 @@
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <script src="https://cdn.plyr.io/3.7.8/plyr.js"></script>
     <style>
+        /* Responsive video container */
         .video-container {
-            width: 100%;
+            width: 95%;
+            height: auto;
             max-width: 100%;
             margin: 0 auto;
-            margin-top: 5px;
-            text-align: center;
         }
 
-        video {
+        /* Fullscreen Video Mode */
+        video:fullscreen {
             width: 100%;
-            height: auto;
+            height: 100%;
+            object-fit: contain; /* Maintain aspect ratio */
         }
 
-        @media (orientation: landscape) and (fullscreen) {
-            video {
-                width: 100vw;
-                height: 100vh;
-                object-fit: contain;
+        /* Styles for the join button */
+        #joinTelegramButton {
+            background-color: #fff;
+            color: #0074d9;
+            border: 2px solid #0074d9;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+
+        /* Ensure video is properly centered on mobile devices */
+        @media (max-width: 768px) {
+            .video-container {
+                width: 100%;
             }
         }
     </style>
