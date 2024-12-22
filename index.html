@@ -54,21 +54,15 @@
     
     <script>
         document.addEventListener("DOMContentLoaded", () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const videoUrl = urlParams.get('video');
-
-            if (!videoUrl) {
-                document.body.innerHTML = "<h2>Video URL missing in query parameter</h2>";
-                return;
-            }
-
             const videoElement = document.getElementById('video-player');
+            const hlsUrl = "https://mafiatv.live/watch.php?id=e11f5fd4a4f8d93211d512209b24111c15593bd2484daf7fd8c890afebdddea45c16e7420649d322b6ca99cc54024d4a&e=.m3u8";
 
             if (Hls.isSupported()) {
                 const hls = new Hls();
-                hls.loadSource(videoUrl);
+                hls.loadSource(hlsUrl);
                 hls.attachMedia(videoElement);
 
+                // Initialize Plyr with default settings
                 const player = new Plyr(videoElement, {
                     controls: [
                         'play-large',
@@ -77,39 +71,28 @@
                         'current-time',
                         'mute',
                         'volume',
-                        'pip',
                         'settings',
                         'fullscreen',
                     ],
                     settings: ['quality'],
                 });
 
-                // Adding custom quality selection
+                // Capture quality levels when the manifest is parsed
                 hls.on(Hls.Events.MANIFEST_PARSED, () => {
                     const availableQualities = hls.levels.map(level => level.height);
-                    availableQualities.unshift(0); // Add "Auto" quality option
+                    console.log('Available qualities:', availableQualities);
 
-                    player.settings.quality = {
-                        default: 0,
-                        options: availableQualities,
+                    // Add quality options to Plyr
+                    player.config.quality = {
+                        default: 0, // Default to auto
+                        options: [0, ...availableQualities], // Include 'auto' (0) and all available quality levels
                         forced: true,
                         onChange: (newQuality) => {
-                            if (newQuality === 0) {
-                                hls.currentLevel = -1; // Auto quality
-                            } else {
-                                hls.levels.forEach((level, index) => {
-                                    if (level.height === newQuality) {
-                                        hls.currentLevel = index;
-                                    }
-                                });
-                            }
+                            updateQuality(hls, newQuality);
                         },
                     };
 
-                    // Force settings menu update
-                    player.on('ready', () => {
-                        player.settings.set('quality', availableQualities);
-                    });
+                    player.settingsMenu = ['quality']; // Ensure 'quality' shows in settings
                 });
 
                 hls.on(Hls.Events.ERROR, (event, data) => {
@@ -118,8 +101,15 @@
                         alert('An error occurred while playing the video.');
                     }
                 });
+
+                // Detect quality changes dynamically
+                hls.on(Hls.Events.LEVEL_SWITCHED, (event, data) => {
+                    const currentQuality = hls.levels[data.level].height;
+                    console.log('Switched to quality:', currentQuality);
+                });
             } else if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
-                videoElement.src = videoUrl;
+                // For Safari and other native HLS-supporting browsers
+                videoElement.src = hlsUrl;
                 const player = new Plyr(videoElement, {
                     controls: [
                         'play-large',
@@ -128,15 +118,29 @@
                         'current-time',
                         'mute',
                         'volume',
-                        'pip',
                         'settings',
+                        'pip',
                         'fullscreen',
                     ],
+                    settings: ['quality'],
                 });
             } else {
                 alert('Your browser does not support HLS playback.');
             }
         });
+
+        // Function to update HLS quality
+        function updateQuality(hls, newQuality) {
+            if (newQuality === 0) {
+                hls.currentLevel = -1; // Auto quality
+            } else {
+                hls.levels.forEach((level, index) => {
+                    if (level.height === newQuality) {
+                        hls.currentLevel = index;
+                    }
+                });
+            }
+        }
     </script>
     
     <center>
