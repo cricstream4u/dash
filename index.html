@@ -83,14 +83,32 @@
                     settings: ['quality'],
                 });
 
+                // Adding custom quality selection
                 hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                    const availableQualities = hls.levels.map(level => level.height).filter(Boolean);
-                    player.config.quality = {
+                    const availableQualities = hls.levels.map(level => level.height);
+                    availableQualities.unshift(0); // Add "Auto" quality option
+
+                    player.settings.quality = {
                         default: 0,
-                        options: [0, ...availableQualities],
+                        options: availableQualities,
                         forced: true,
-                        onChange: (newQuality) => updateQuality(hls, newQuality),
+                        onChange: (newQuality) => {
+                            if (newQuality === 0) {
+                                hls.currentLevel = -1; // Auto quality
+                            } else {
+                                hls.levels.forEach((level, index) => {
+                                    if (level.height === newQuality) {
+                                        hls.currentLevel = index;
+                                    }
+                                });
+                            }
+                        },
                     };
+
+                    // Force settings menu update
+                    player.on('ready', () => {
+                        player.settings.set('quality', availableQualities);
+                    });
                 });
 
                 hls.on(Hls.Events.ERROR, (event, data) => {
@@ -113,36 +131,9 @@
                         'settings',
                         'fullscreen',
                     ],
-                    settings: ['quality'],
                 });
             } else {
                 alert('Your browser does not support HLS playback.');
-            }
-        });
-
-        function updateQuality(hls, newQuality) {
-            if (newQuality === 0) {
-                hls.currentLevel = -1; // Auto
-            } else {
-                hls.levels.forEach((level, index) => {
-                    if (level.height === newQuality) {
-                        hls.currentLevel = index;
-                    }
-                });
-            }
-        }
-
-        // Enforce landscape mode in fullscreen
-        const videoElement = document.getElementById('video-player');
-        videoElement.addEventListener('fullscreenchange', () => {
-            if (document.fullscreenElement) {
-                if (screen.orientation.lock) {
-                    screen.orientation.lock('landscape').catch((err) => console.warn('Orientation lock failed:', err));
-                }
-            } else {
-                if (screen.orientation.unlock) {
-                    screen.orientation.unlock();
-                }
             }
         });
     </script>
