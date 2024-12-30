@@ -51,58 +51,103 @@
     <div class="video-container">
         <video id="video-player" controls crossorigin playsinline></video>
     </div>
+    
     <script>
-    document.addEventListener("DOMContentLoaded", () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const videoUrl =
-        urlParams.get("video") ||
-        "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"; // Fallback URL for testing
+        document.addEventListener("DOMContentLoaded", () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const videoUrl = urlParams.get('video');
 
-    if (!videoUrl) {
-        document.body.innerHTML = "<h2>Video URL missing in query parameter</h2>";
-        return;
-    }
+            if (!videoUrl) {
+                document.body.innerHTML = "<h2>Video URL missing in query parameter</h2>";
+                return;
+            }
 
-    const videoElement = document.getElementById("video-player");
+            const videoElement = document.getElementById('video-player');
 
-    if (Hls.isSupported()) {
-        const hls = new Hls();
-        hls.loadSource(videoUrl);
-        hls.attachMedia(videoElement);
+            if (Hls.isSupported()) {
+                const hls = new Hls();
+                hls.loadSource(videoUrl);
+                hls.attachMedia(videoElement);
 
-        const player = new Plyr(videoElement, {
-            controls: [
-                "play-large",
-                "play",
-                "progress",
-                "current-time",
-                "mute",
-                "settings",
-                "pip",
-                "fullscreen",
-            ],
-        });
+                const player = new Plyr(videoElement, {
+                    controls: [
+                        'play-large',
+                        'play',
+                        'progress',
+                        'current-time',
+                        'mute',
+                        'volume',
+                        'settings',
+                        'pip',
+                        'fullscreen',
+                    ],
+                    settings: ['quality'],
+                });
 
-        hls.on(Hls.Events.MANIFEST_PARSED, () => {
-            console.log("HLS Manifest loaded successfully.");
-        });
+                hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                    const availableQualities = hls.levels.map(level => level.height);
+                    player.config.quality = {
+                        default: 0,
+                        options: [0, ...availableQualities],
+                        forced: true,
+                        onChange: (newQuality) => updateQuality(hls, newQuality),
+                    };
+                });
 
-        hls.on(Hls.Events.ERROR, (event, data) => {
-            console.error("HLS Error:", data);
-            if (data.fatal) {
-                document.body.innerHTML =
-                    "<h2>An error occurred while loading the video. Please check the stream.</h2>";
+                hls.on(Hls.Events.ERROR, (event, data) => {
+                    if (data.fatal) {
+                        console.error('Fatal error encountered:', data);
+                        alert('An error occurred while playing the video.');
+                    }
+                });
+            } else if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
+                videoElement.src = videoUrl;
+                const player = new Plyr(videoElement, {
+                    controls: [
+                        'play-large',
+                        'play',
+                        'progress',
+                        'current-time',
+                        'mute',
+                        'volume',
+                        'settings',
+                        'pip',
+                        'fullscreen',
+                    ],
+                    settings: ['quality'],
+                });
+            } else {
+                alert('Your browser does not support HLS playback.');
             }
         });
-    } else if (videoElement.canPlayType("application/vnd.apple.mpegurl")) {
-        videoElement.src = videoUrl;
-        new Plyr(videoElement);
-    } else {
-        document.body.innerHTML =
-            "<h2>Your browser does not support HLS playback.</h2>";
-    }
-});
-</script>
+
+        function updateQuality(hls, newQuality) {
+            if (newQuality === 0) {
+                hls.currentLevel = -1;
+            } else {
+                hls.levels.forEach((level, index) => {
+                    if (level.height === newQuality) {
+                        hls.currentLevel = index;
+                    }
+                });
+            }
+        }
+
+        // Enforce landscape mode in fullscreen
+        const videoElement = document.getElementById('video-player');
+        videoElement.addEventListener('fullscreenchange', () => {
+            if (document.fullscreenElement) {
+                if (screen.orientation.lock) {
+                    screen.orientation.lock('landscape').catch((err) => console.warn('Orientation lock failed:', err));
+                }
+            } else {
+                if (screen.orientation.unlock) {
+                    screen.orientation.unlock();
+                }
+            }
+        });
+         
+    </script>
     
     <!-- Counter and Telegram Button -->
     <center>
