@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TG- @cric_stream</title>
-    <!--- mafiatv m3u8 player --->
+    <!--- mafiatv m3u8 player ---> 
     <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css">
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <script src="https://cdn.plyr.io/3.7.8/plyr.js"></script>
@@ -50,13 +50,13 @@
     </div>
     
     <div class="video-container">
-        <video id="video-player" controls crossorigin playsinline poster="CRIC stream Thumbnail .jpg"></video>
+        <video id="video-player" controls crossorigin playsinline poster="CRIC stream Thumbnail.jpg"></video>
     </div>
     
     <script>
         document.addEventListener("DOMContentLoaded", () => {
             const urlParams = new URLSearchParams(window.location.search);
-            const videoUrl = urlParams.get('video');
+            const videoUrl = urlParams.get('video') || 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8'; // Fallback URL for testing
 
             if (!videoUrl) {
                 document.body.innerHTML = "<h2>Video URL missing in query parameter</h2>";
@@ -85,21 +85,16 @@
                 });
 
                 hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                    const availableQualities = hls.levels.map(level => level.height);
-                    player.config.quality = {
-                        default: 0,
-                        options: [0, ...availableQualities],
-                        forced: true,
-                        onChange: (newQuality) => updateQuality(hls, newQuality),
-                    };
+                    console.log('HLS Manifest loaded.');
                 });
 
                 hls.on(Hls.Events.ERROR, (event, data) => {
+                    console.error('HLS Error:', data);
                     if (data.fatal) {
-                        console.error('Fatal error encountered:', data);
-                        alert('An error occurred while playing the video.');
+                        alert('An error occurred while playing the video. Please check the stream.');
                     }
                 });
+
             } else if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
                 videoElement.src = videoUrl;
                 const player = new Plyr(videoElement, {
@@ -116,13 +111,13 @@
                     settings: ['quality'],
                 });
             } else {
-                alert('Your browser does not support HLS playback.');
+                document.body.innerHTML = "<h2>Your browser does not support HLS playback.</h2>";
             }
         });
 
         function updateQuality(hls, newQuality) {
             if (newQuality === 0) {
-                hls.currentLevel = -1;
+                hls.currentLevel = -1; // Auto quality
             } else {
                 hls.levels.forEach((level, index) => {
                     if (level.height === newQuality) {
@@ -145,7 +140,6 @@
                 }
             }
         });
-        
     </script>
     
     <!-- Counter and Telegram Button -->
@@ -159,6 +153,5 @@
             <button id="joinTelegramButton">Join Telegram</button>
         </a>
     </div>
-    
 </body>
 </html>
