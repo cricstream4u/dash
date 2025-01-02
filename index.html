@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-     <link rel="shortcut icon" type="image/x-icon" href="Cric stream Favicon.jpg">
+    <link rel="shortcut icon" type="image/x-icon" href="Cric stream Favicon.jpg">
     <title>TG- @cric_stream</title>
     <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css">
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
@@ -43,7 +43,7 @@
             const videoUrl = urlParams.get('video');
 
             if (!videoUrl) {
-                document.body.innerHTML = "<h2>Video URL missing in query parameter</h2>";
+                console.error("Video URL missing in query parameter.");
                 return;
             }
 
@@ -81,7 +81,6 @@
                 hls.on(Hls.Events.ERROR, (event, data) => {
                     if (data.fatal) {
                         console.error('Fatal error encountered:', data);
-                        alert('An error occurred while playing the video.');
                     }
                 });
             } else if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
@@ -101,7 +100,7 @@
                     settings: ['quality'],
                 });
             } else {
-                alert('Your browser does not support HLS playback.');
+                console.warn("Your browser does not support HLS playback.");
             }
         });
 
@@ -124,13 +123,8 @@
                 if (screen.orientation.lock) {
                     screen.orientation.lock('landscape').catch((err) => console.warn('Orientation lock failed:', err));
                 }
-            } else {
-                if (screen.orientation.unlock) {
-                    screen.orientation.unlock();
-                }
             }
         });
-         
     </script>
     
     <!-- Counter and Telegram Button -->
