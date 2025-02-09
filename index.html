@@ -100,94 +100,40 @@
     </div>
     
     <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const videoUrl = urlParams.get('video');
+    document.addEventListener("DOMContentLoaded", () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        let videoUrl = urlParams.get('video');
 
-            if (!videoUrl) {
-                console.error("Video URL missing in query parameter.");
-                return;
-            }
-
-            const videoElement = document.getElementById('video-player');
-
-            if (Hls.isSupported()) {
-                const hls = new Hls();
-                hls.loadSource(videoUrl);
-                hls.attachMedia(videoElement);
-
-                const player = new Plyr(videoElement, {
-                    controls: [
-                        'play-large',
-                        'play',
-                        'progress',
-                        'current-time',
-                        'mute',
-                        'settings',
-                        'pip',
-                        'fullscreen',
-                    ],
-                    settings: ['quality'],
-                });
-
-                hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                    const availableQualities = hls.levels.map(level => level.height);
-                    player.config.quality = {
-                        default: 0,
-                        options: [0, ...availableQualities],
-                        forced: true,
-                        onChange: (newQuality) => updateQuality(hls, newQuality),
-                    };
-                });
-
-                hls.on(Hls.Events.ERROR, (event, data) => {
-                    if (data.fatal) {
-                        console.error('Fatal error encountered:', data);
-                    }
-                });
-            } else if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
-                videoElement.src = videoUrl;
-                const player = new Plyr(videoElement, {
-                    controls: [
-                        'play-large',
-                        'play',
-                        'progress',
-                        'current-time',
-                        'mute',
-                        'volume',
-                        'settings',
-                        'pip',
-                        'fullscreen',
-                    ],
-                    settings: ['quality'],
-                });
-            } else {
-                console.warn("Your browser does not support HLS playback.");
-            }
-        });
-
-        function updateQuality(hls, newQuality) {
-            if (newQuality === 0) {
-                hls.currentLevel = -1;
-            } else {
-                hls.levels.forEach((level, index) => {
-                    if (level.height === newQuality) {
-                        hls.currentLevel = index;
-                    }
-                });
-            }
+        if (!videoUrl) {
+            videoUrl = "https://tapmadtv.live/master.m3u8?key=WASITV&c=starhindi"; // Fallback for debugging
         }
 
-        // Enforce landscape mode in fullscreen
         const videoElement = document.getElementById('video-player');
-        videoElement.addEventListener('fullscreenchange', () => {
-            if (document.fullscreenElement) {
-                if (screen.orientation.lock) {
-                    screen.orientation.lock('landscape').catch((err) => console.warn('Orientation lock failed:', err));
+
+        if (Hls.isSupported()) {
+            const hls = new Hls({
+                xhrSetup: function(xhr, url) {
+                    xhr.withCredentials = true; // Enables credentials for authentication
                 }
-            }
-        });
-    </script>
+            });
+            hls.loadSource(videoUrl);
+            hls.attachMedia(videoElement);
+            
+            hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                console.log("HLS Manifest loaded successfully!");
+            });
+
+            hls.on(Hls.Events.ERROR, (event, data) => {
+                console.error("HLS Error:", data);
+            });
+        } else if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
+            videoElement.src = videoUrl;
+        } else {
+            console.warn("HLS not supported on this browser.");
+        }
+    });
+</script>
+
 
      <script>
         // Restrict iframe embedding
